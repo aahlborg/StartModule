@@ -3,12 +3,18 @@
 
 #include "Arduino.h"
 
+typedef struct {
+  unsigned char address;
+  unsigned char command;
+} rc5_cmd;
+
 class IrRc5
 {
   public:
-    IrRc5(int pin);
+    static void init(int pin);
+    static void registerCmdHandler(void(*func)(rc5_cmd * cmd));
   private:
-    int _pin;
+    IrRc5();
 };
 
 #endif
