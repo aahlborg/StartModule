@@ -1,3 +1,21 @@
+/*
+StartModule
+Copyright (C) 2015 Marcus Ahlberg
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include "Arduino.h"
 #include "StartModule.h"
 #include "IrRc5.h"
@@ -24,6 +42,8 @@ StartModule::StartModule(int irPin, int ledPin, int eepromAddr, void(*stateChang
 
   IrRc5::init(_irPin);
   IrRc5::registerCmdHandler(irCmdHandler);
+
+  pinMode(_ledPin, INPUT);
 
   _startModule = this;
   delay(7000);
@@ -59,11 +79,13 @@ void StartModule::cmdHandler(int addr, int cmd)
     {
       // Start
       setState(STATE_RUNNING);
+      digitalWrite(_ledPin, HIGH);
     }
     else if ((STATE_RUNNING == _state) && (cmd == DEFAULT_STOP_CMD)) //(cmd == _cmdBase))
     {
       // Stop
       setState(STATE_STOPPED);
+      digitalWrite(_ledPin, LOW);
     }
     break;
   }
@@ -71,10 +93,9 @@ void StartModule::cmdHandler(int addr, int cmd)
 
 void StartModule::setState(robot_state state)
 {
-    Serial.printf("1Setting state %d\n", state);
   if (state <= STATE_STOPPED && state >= STATE_IDLE)
   {
-    Serial.printf("2Setting state %d\n", state);
+    Serial.printf("Setting state %d\n", state);
     // Update state
     _state = state;
     if (_stateChangeFunc)
