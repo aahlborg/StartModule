@@ -18,6 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <Arduino.h>
 #include <ArduinoTest.h>
+#include <EEPROM.h>
+#include <IntervalTimer.h>
 #include <cstdio>
 #include <cstdarg>
 #include <cassert>
@@ -25,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /////////////////////
 // Global variables
 SerialObj Serial;
+Eeprom EEPROM;
 
 /////////////////////
 // Local variables
@@ -74,6 +77,35 @@ int digitalRead(int pin)
 void digitalWrite(int pin, int value)
 {
   pinVal_[pin] = !!value;
+  Serial.printf("%u, pin %d: %d\n", time_, pin, pinVal_[pin]);
+}
+
+// EEPROM library
+char Eeprom::read(int addr)
+{
+  return _data[addr];
+}
+
+void Eeprom::write(int addr, char data)
+{
+  _data[addr] = data;
+}
+
+// IntervalTimer library
+IntervalTimer::IntervalTimer()
+{
+  callback_fp_ = NULL;
+}
+
+bool IntervalTimer::begin(void(*callback_fp)(void), int ticks)
+{
+  callback_fp_ = callback_fp;
+  return true;
+}
+
+void IntervalTimer::end()
+{
+  callback_fp_ = NULL;
 }
 
 /////////////////////

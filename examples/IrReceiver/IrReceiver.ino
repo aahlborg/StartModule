@@ -1,4 +1,5 @@
 #include <StartModule.h>
+#include <EEPROM.h>
 
 #define IR_PIN 20
 #define LED_PIN 13

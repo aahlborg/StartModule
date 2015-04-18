@@ -17,7 +17,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <iostream>
+#include <stdint.h>
 #include <StartModule.h>
+#include <EEPROM.h>
 #include <ArduinoTest.h>
 
 using namespace std;
@@ -81,6 +83,15 @@ static void stateChangeFunc(robot_state newState)
   Serial.printf("Hello state %d\n", newState);
 }
 
+static void printEeprom(int addr, int length)
+{
+  for (int i = 0; i < length; ++i)
+  {
+    uint8_t data = EEPROM.read(addr + i);
+    Serial.printf("0x%04x: 0x%02x\n", addr + i, data);
+  }
+}
+
 int main(int argc, char * argv[])
 {
   Serial.begin(9600);
@@ -90,8 +101,10 @@ int main(int argc, char * argv[])
 
   delay(100000);
   playPinEvents(20, cmd5, sizeof(cmd5) / sizeof(cmd5[0]));
+  printEeprom(0, 3);
   delay(100000);
   playPinEvents(20, cmd4, sizeof(cmd4) / sizeof(cmd4[0]));
+  printEeprom(0, 3);
 
   return 0;
 }

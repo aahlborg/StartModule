@@ -10,4 +10,4 @@ clean:
 	rm -f testbench
 
 testbench: $(sourcefiles) $(headerfiles)
-	g++ $(includedirs) -Wno-write-strings -g -o testbench $(sourcefiles)
+	g++ $(includedirs) -Wall -Wno-write-strings -g -o testbench $(sourcefiles)

@@ -23,26 +23,37 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 typedef enum {
   STATE_IDLE,
+  STATE_PROGRAM,
   STATE_RUNNING,
+  STATE_STOP_SAFE,
   STATE_STOPPED
 } robot_state;
+
+class IntervalTimer;
 
 class StartModule
 {
   public:
     StartModule(int irPin, int ledPin, int eepromAddr, void(*stateChangeFunc)(robot_state newState));
+    ~StartModule();
     void cmdHandler(int addr, int cmd);
+    void timerHandler();
   private:
     void setState(robot_state state);
     void saveData();
+    void loadData();
     void program(int cmd);
+    void setLed(int state);
 
-  	int _irPin;
-  	int _ledPin;
-    int _cmdBase;
-    int _eepromAddr;
-    robot_state _state;
-    void(*_stateChangeFunc)(robot_state newState);
+  	int irPin_;
+  	int ledPin_;
+    int cmdBase_;
+    int eepromAddr_;
+    robot_state state_;
+    void(*stateChangeFunc_)(robot_state newState);
+    bool blinkLed_;
+    int blinkCount_;
+    IntervalTimer * timer_;
 };
 
 #endif

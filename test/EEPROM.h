@@ -17,55 +17,24 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 /*
- * Stub of Arduino defines
+ * EEPROM library stub
  */
-#ifndef _ARDUINO_H_
-#define _ARDUINO_H_
+#ifndef _EEPROM_H_
+#define _EEPROM_H_
 
-#include <cstddef>
-#include <cstdlib>
+#include <Arduino.h>
 
-/////////////////////
-// Defines
+#define EEPROM_SIZE 1024
 
-#define LOW 0
-#define HIGH 1
-
-enum PinFunction
-{
-  INPUT,
-  OUTPUT
-};
-
-enum PinEvent
-{
-  RISING,
-  FALLING,
-  CHANGE
-};
-
-/////////////////////
-// Classes
-
-class SerialObj
+class Eeprom
 {
   public:
-    static void begin(int baudRate) {}
-    static void printf(char * format, ...);
+    char read(int addr);
+    void write(int addr, char data);
+  private:
+    char _data[EEPROM_SIZE];
 };
 
-extern SerialObj Serial;
-
-/////////////////////
-// Functions
-
-void delay(int ticks);
-unsigned long micros(void);
-
-void pinMode(int pin, PinFunction mode);
-void attachInterrupt(int pin, void(*isr)(void), PinEvent event);
-
-int digitalRead(int pin);
-void digitalWrite(int pin, int value);
+extern Eeprom EEPROM;
 
 #endif
