@@ -147,7 +147,7 @@ void StartModule::cmdHandler(int addr, int cmd)
     break;
 
   case STATE_RUNNING:
-    if (OP_PROGRAM = op)
+    if (OP_PROGRAM == op)
     {
       program(cmd);
       setState(STATE_PROGRAM);
