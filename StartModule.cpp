@@ -88,7 +88,7 @@ StartModule::~StartModule()
 void StartModule::cmdHandler(int addr, int cmd)
 {
   operation op = OP_NOP;
-  Serial.printf("Received RC5 event: addr 0x%x, cmd 0x%x\n", addr, cmd);
+  //Serial.printf("Received RC5 event: addr 0x%x, cmd 0x%x\n", addr, cmd);
 
   switch (addr)
   {
@@ -274,7 +274,7 @@ void StartModule::loadData()
 
 void StartModule::program(int cmd)
 {
-  Serial.printf("Programming cmd base %d\n", cmd);
+  //Serial.printf("Programming cmd base %d\n", cmd);
   cmdBase_ = cmd & 0xfe;
 }
 
