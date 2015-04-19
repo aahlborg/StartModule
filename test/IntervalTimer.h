@@ -31,8 +31,15 @@ class IntervalTimer
     bool begin(void(*callback_fp)(void), int ticks);
     //void priority(int prio);
     void end();
+    // Test interface
+    void triggerTimer();
   private:
     void(*callback_fp_)(void);
+    int ticks_;
 };
+
+extern IntervalTimer * hwTimer_;
+
+void triggerHwTimer();
 
 #endif

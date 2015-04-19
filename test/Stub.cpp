@@ -28,6 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // Global variables
 SerialObj Serial;
 Eeprom EEPROM;
+IntervalTimer * hwTimer_;
 
 /////////////////////
 // Local variables
@@ -95,17 +96,37 @@ void Eeprom::write(int addr, char data)
 IntervalTimer::IntervalTimer()
 {
   callback_fp_ = NULL;
+  hwTimer_ = this;
 }
 
 bool IntervalTimer::begin(void(*callback_fp)(void), int ticks)
 {
   callback_fp_ = callback_fp;
+  ticks_ = ticks;
+  Serial.printf("Register timer cb 0x%08x every %d ticks\n", callback_fp_, ticks_);
   return true;
 }
 
 void IntervalTimer::end()
 {
   callback_fp_ = NULL;
+}
+
+void IntervalTimer::triggerTimer()
+{
+  if (callback_fp_)
+  {
+    time_ += ticks_;
+    callback_fp_();
+  }
+}
+
+void triggerHwTimer()
+{
+  if (hwTimer_)
+  {
+    hwTimer_->triggerTimer();
+  }
 }
 
 /////////////////////

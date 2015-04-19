@@ -36,6 +36,7 @@ class StartModule
   public:
     StartModule(int irPin, int ledPin, int eepromAddr, void(*stateChangeFunc)(robot_state newState));
     ~StartModule();
+    robot_state getState() { return state_; }
     void cmdHandler(int addr, int cmd);
     void timerHandler();
   private:

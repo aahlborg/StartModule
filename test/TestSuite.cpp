@@ -16,13 +16,51 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <iostream>
+#include <stdio.h>
 #include <stdint.h>
 #include <StartModule.h>
+#include <IrRc5.h>
 #include <EEPROM.h>
+#include <IntervalTimer.h>
 #include <ArduinoTest.h>
 
 using namespace std;
+
+// Test macros
+#define RUN(test) do { \
+  printf("\nStarting test " #test "\n"); \
+  testPassed = true; \
+  test(); \
+  if (!testPassed) { suitePassed = false; } \
+  printf("Test " #test " %s\n", testPassed ? "SUCCESSFUL" : "FAILED"); \
+  } while(0)
+
+#define START_TEST(suite) do { \
+  suitePassed = true; \
+  printf("Running test suite " #suite "\n"); \
+  } while(0)
+
+#define END_TEST do { \
+  if (suitePassed) { printf("\nAll tests passed SUCCESSFULLY\n"); } \
+  else { printf("\nSome tests FAILED\n"); } \
+  } while(0)
+
+#define VERIFY(expr) do { \
+  if (!(expr)) \
+  { \
+    testPassed = false; \
+    printf("Expression evaluated false: \"" #expr "\"\n"); \
+  } \
+  } while(0)
+
+static bool testPassed, suitePassed;
+
+// Test interface for StartModule
+void testTriggerIrCmd(rc5_cmd * data);
+
+#define IR_PIN 20
+#define LED_PIN 13
+#define EEPROM_ADDR 0x40
 
 pinevent_t cmd5[] = {
   {0, 0},
@@ -78,33 +116,212 @@ pinevent_t cmd4[] = {
   {22865, 1}
 };
 
+static int motorState_;
+
 static void stateChangeFunc(robot_state newState)
 {
-  Serial.printf("Hello state %d\n", newState);
+  //Serial.printf("Hello state %d\n", newState);
+  if (STATE_RUNNING == newState)
+  {
+    motorState_ = 1;
+  }
+  else
+  {
+    motorState_ = 0;
+  }
 }
 
-static void printEeprom(int addr, int length)
+/*static void printEeprom()
 {
-  for (int i = 0; i < length; ++i)
+  for (int i = 0; i < 3; ++i)
   {
-    uint8_t data = EEPROM.read(addr + i);
-    Serial.printf("0x%04x: 0x%02x\n", addr + i, data);
+    uint8_t data = EEPROM.read(EEPROM_ADDR + i);
+    Serial.printf("0x%04x: 0x%02x\n", EEPROM_ADDR + i, data);
   }
+}*/
+
+static void writeEepromData(robot_state state, int cmdBase)
+{
+  EEPROM.write(EEPROM_ADDR, 0xab);
+  EEPROM.write(EEPROM_ADDR + 1, cmdBase);
+  EEPROM.write(EEPROM_ADDR + 2, state);
+}
+
+static void resetEeprom()
+{
+  EEPROM.write(EEPROM_ADDR, 0);
+  EEPROM.write(EEPROM_ADDR + 1, 0);
+  EEPROM.write(EEPROM_ADDR + 2, 0);
+}
+
+/////////////////////
+// Tests
+
+static void testRc5()
+{
+  motorState_ = -1;
+
+  StartModule startModule(IR_PIN, LED_PIN, EEPROM_ADDR, stateChangeFunc);
+
+  VERIFY(startModule.getState() == STATE_IDLE);
+  VERIFY(digitalRead(LED_PIN) == 0);
+  VERIFY(0 == motorState_);
+
+  playPinEvents(IR_PIN, cmd5, sizeof(cmd5) / sizeof(cmd5[0]));
+
+  VERIFY(startModule.getState() == STATE_RUNNING);
+  VERIFY(digitalRead(LED_PIN) == 1);
+  VERIFY(1 == motorState_);
+
+  playPinEvents(IR_PIN, cmd4, sizeof(cmd4) / sizeof(cmd4[0]));
+
+  VERIFY(startModule.getState() == STATE_STOP_SAFE);
+  VERIFY(digitalRead(LED_PIN) == 0);
+  VERIFY(0 == motorState_);
+
+  resetEeprom();
+}
+
+static void testProgram()
+{
+  motorState_ = -1;
+
+  StartModule startModule(IR_PIN, LED_PIN, EEPROM_ADDR, stateChangeFunc);
+
+  rc5_cmd prgm = {0xb, 0xa};
+  rc5_cmd start = {0x7, 0xa + 1};
+
+  VERIFY(startModule.getState() == STATE_IDLE);
+  VERIFY(0 == motorState_);
+
+  testTriggerIrCmd(&start);
+
+  VERIFY(startModule.getState() == STATE_IDLE);
+  VERIFY(0 == motorState_);
+
+  testTriggerIrCmd(&prgm);
+
+  VERIFY(startModule.getState() == STATE_PROGRAM);
+  VERIFY(0 == motorState_);
+  VERIFY(digitalRead(LED_PIN) == 1);
+  triggerHwTimer();
+  VERIFY(digitalRead(LED_PIN) == 0);
+  triggerHwTimer();
+  VERIFY(digitalRead(LED_PIN) == 1);
+  triggerHwTimer();
+  VERIFY(digitalRead(LED_PIN) == 0);
+
+  VERIFY(startModule.getState() == STATE_IDLE);
+  VERIFY(0 == motorState_);
+
+  testTriggerIrCmd(&start);
+
+  VERIFY(startModule.getState() == STATE_RUNNING);
+  VERIFY(1 == motorState_);
+
+  resetEeprom();
+}
+
+static void testStopSafe()
+{
+  motorState_ = -1;
+
+  StartModule startModule(IR_PIN, LED_PIN, EEPROM_ADDR, stateChangeFunc);
+
+  rc5_cmd stop = {0x7, 0x4};
+
+  VERIFY(startModule.getState() == STATE_IDLE);
+  VERIFY(0 == motorState_);
+
+  testTriggerIrCmd(&stop);
+
+  VERIFY(startModule.getState() == STATE_STOP_SAFE);
+  VERIFY(0 == motorState_);
+  VERIFY(digitalRead(LED_PIN) == 0);
+  triggerHwTimer();
+  VERIFY(digitalRead(LED_PIN) == 0);
+  triggerHwTimer();
+  VERIFY(digitalRead(LED_PIN) == 0);
+  triggerHwTimer();
+  VERIFY(digitalRead(LED_PIN) == 0);
+  VERIFY(startModule.getState() == STATE_STOPPED);
+  VERIFY(digitalRead(LED_PIN) == 0);
+  VERIFY(0 == motorState_);
+
+  resetEeprom();
+}
+
+static void testRestartStopped()
+{
+  writeEepromData(STATE_STOPPED, 0x04);
+  motorState_ = -1;
+
+  StartModule startModule(IR_PIN, LED_PIN, EEPROM_ADDR, stateChangeFunc);
+
+  VERIFY(startModule.getState() == STATE_IDLE);
+  VERIFY(0 == motorState_);
+
+  resetEeprom();
+}
+
+static void testRestartStopSafe()
+{
+  writeEepromData(STATE_STOP_SAFE, 0x04);
+  motorState_ = -1;
+
+  StartModule startModule(IR_PIN, LED_PIN, EEPROM_ADDR, stateChangeFunc);
+
+  VERIFY(startModule.getState() == STATE_STOP_SAFE);
+  VERIFY(0 == motorState_);
+  VERIFY(digitalRead(LED_PIN) == 0);
+  triggerHwTimer();
+  VERIFY(digitalRead(LED_PIN) == 0);
+  triggerHwTimer();
+  VERIFY(digitalRead(LED_PIN) == 0);
+  triggerHwTimer();
+  VERIFY(digitalRead(LED_PIN) == 0);
+  VERIFY(startModule.getState() == STATE_STOPPED);
+  VERIFY(0 == motorState_);
+
+  resetEeprom();
+}
+
+static void testRestartProgram()
+{
+  writeEepromData(STATE_PROGRAM, 0x04);
+  motorState_ = -1;
+
+  StartModule startModule(IR_PIN, LED_PIN, EEPROM_ADDR, stateChangeFunc);
+
+  VERIFY(startModule.getState() == STATE_PROGRAM);
+  VERIFY(0 == motorState_);
+  VERIFY(digitalRead(LED_PIN) == 1);
+  triggerHwTimer();
+  VERIFY(digitalRead(LED_PIN) == 0);
+  triggerHwTimer();
+  VERIFY(digitalRead(LED_PIN) == 1);
+  triggerHwTimer();
+  VERIFY(digitalRead(LED_PIN) == 0);
+  VERIFY(startModule.getState() == STATE_IDLE);
+  VERIFY(0 == motorState_);
+
+  resetEeprom();
 }
 
 int main(int argc, char * argv[])
 {
   Serial.begin(9600);
-  Serial.printf("Hello, world\n");
 
-  StartModule startModule(20, 13, 0, stateChangeFunc);
+  START_TEST(StartModule);
 
-  delay(100000);
-  playPinEvents(20, cmd5, sizeof(cmd5) / sizeof(cmd5[0]));
-  printEeprom(0, 3);
-  delay(100000);
-  playPinEvents(20, cmd4, sizeof(cmd4) / sizeof(cmd4[0]));
-  printEeprom(0, 3);
+  RUN(testRc5);
+  RUN(testProgram);
+  RUN(testStopSafe);
+  RUN(testRestartStopped);
+  RUN(testRestartStopSafe);
+  RUN(testRestartProgram);
+
+  END_TEST;
 
   return 0;
 }

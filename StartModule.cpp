@@ -75,6 +75,7 @@ StartModule::StartModule(int irPin, int ledPin, int eepromAddr, void(*stateChang
   {
     state_ = STATE_IDLE;
   }
+  setState(state_);
 
   startModule_ = this;
 }
@@ -92,11 +93,11 @@ void StartModule::cmdHandler(int addr, int cmd)
   switch (addr)
   {
   case PROGRAM_ADDR:
-    Serial.printf("Programming address\n");
+    //Serial.printf("Programming address\n");
     op = OP_PROGRAM;
     break;
   case COMPETITION_ADDR:
-    Serial.printf("Competition address\n");
+    //Serial.printf("Competition address\n");
     // Run command if correct dohyo
     if (cmd == cmdBase_ + 1)
     {
@@ -108,7 +109,7 @@ void StartModule::cmdHandler(int addr, int cmd)
     }
     break;
   case TESTING_ADDR:
-    Serial.printf("Testing address\n");
+    //Serial.printf("Testing address\n");
     // Run default test command
     if (cmd == DEFAULT_STOP_CMD + 1)
     {
@@ -173,7 +174,12 @@ void StartModule::cmdHandler(int addr, int cmd)
 void StartModule::timerHandler()
 {
   --blinkCount_;
-  digitalWrite(ledPin_, blinkCount_ & 0x1);
+  if (blinkLed_)
+  {
+    digitalWrite(ledPin_, blinkCount_ & 0x1);
+  }
+
+  //Serial.printf("StartModule::timerHandler: blinkCount %d\n", blinkCount_);
 
   if (0 == blinkCount_)
   {
@@ -195,9 +201,9 @@ void StartModule::timerHandler()
 
 void StartModule::setState(robot_state state)
 {
-  if (state <= STATE_STOPPED && state >= STATE_IDLE)
+  if (state >= STATE_IDLE && state <= STATE_STOPPED)
   {
-    Serial.printf("Setting state %d\n", state);
+    //Serial.printf("Setting state %d\n", state);
     // Update state
     state_ = state;
     if (stateChangeFunc_)
@@ -207,9 +213,26 @@ void StartModule::setState(robot_state state)
     }
     // Save state
     saveData();
+    switch (state_)
+    {
+    case STATE_RUNNING:
+      setLed(1);
+      break;
+    case STATE_PROGRAM:
+      setLed(2);
+      break;
+    case STATE_STOP_SAFE:
+      setLed(0);
+      blinkLed_ = false;
+      blinkCount_ = ONE_SEC_IN_TIMER_TICKS;
+      timer_->begin(timerIsr, TIMER_PERIOD);
+      break;
+    default:
+      setLed(0);
+      break;
+    }
   }
 }
-
 
 void StartModule::saveData()
 {
@@ -294,3 +317,11 @@ static void timerIsr()
     startModule_->timerHandler();
   }
 }
+
+// Interface for unit testing
+#ifdef TEST
+void testTriggerIrCmd(rc5_cmd * data)
+{
+  irCmdHandler(data);
+}
+#endif
