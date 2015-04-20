@@ -49,7 +49,7 @@ using namespace std;
   if (!(expr)) \
   { \
     testPassed = false; \
-    printf("Expression evaluated false: \"" #expr "\"\n"); \
+    printf("Line %d: Expression evaluated false: \"" #expr "\"\n", __LINE__); \
   } \
   } while(0)
 
@@ -203,6 +203,8 @@ static void testProgram()
 
   VERIFY(startModule.getState() == STATE_PROGRAM);
   VERIFY(0 == motorState_);
+  VERIFY(digitalRead(LED_PIN) == 0);
+  triggerHwTimer();
   VERIFY(digitalRead(LED_PIN) == 1);
   triggerHwTimer();
   VERIFY(digitalRead(LED_PIN) == 0);
@@ -213,11 +215,13 @@ static void testProgram()
 
   VERIFY(startModule.getState() == STATE_IDLE);
   VERIFY(0 == motorState_);
+  VERIFY(digitalRead(LED_PIN) == 0);
 
   testTriggerIrCmd(&start);
 
   VERIFY(startModule.getState() == STATE_RUNNING);
   VERIFY(1 == motorState_);
+  VERIFY(digitalRead(LED_PIN) == 1);
 
   resetEeprom();
 }
@@ -239,14 +243,24 @@ static void testStopSafe()
   VERIFY(0 == motorState_);
   VERIFY(digitalRead(LED_PIN) == 0);
   triggerHwTimer();
-  VERIFY(digitalRead(LED_PIN) == 0);
+  VERIFY(digitalRead(LED_PIN) == 1);
   triggerHwTimer();
   VERIFY(digitalRead(LED_PIN) == 0);
+  triggerHwTimer();
+  VERIFY(digitalRead(LED_PIN) == 1);
   triggerHwTimer();
   VERIFY(digitalRead(LED_PIN) == 0);
   VERIFY(startModule.getState() == STATE_STOPPED);
   VERIFY(digitalRead(LED_PIN) == 0);
   VERIFY(0 == motorState_);
+  triggerHwTimer();
+  VERIFY(digitalRead(LED_PIN) == 1);
+  triggerHwTimer();
+  VERIFY(digitalRead(LED_PIN) == 0);
+  triggerHwTimer();
+  triggerHwTimer();
+  triggerHwTimer();
+  VERIFY(startModule.getState() == STATE_STOPPED);
 
   resetEeprom();
 }
@@ -275,9 +289,11 @@ static void testRestartStopSafe()
   VERIFY(0 == motorState_);
   VERIFY(digitalRead(LED_PIN) == 0);
   triggerHwTimer();
-  VERIFY(digitalRead(LED_PIN) == 0);
+  VERIFY(digitalRead(LED_PIN) == 1);
   triggerHwTimer();
   VERIFY(digitalRead(LED_PIN) == 0);
+  triggerHwTimer();
+  VERIFY(digitalRead(LED_PIN) == 1);
   triggerHwTimer();
   VERIFY(digitalRead(LED_PIN) == 0);
   VERIFY(startModule.getState() == STATE_STOPPED);
@@ -295,6 +311,8 @@ static void testRestartProgram()
 
   VERIFY(startModule.getState() == STATE_PROGRAM);
   VERIFY(0 == motorState_);
+  VERIFY(digitalRead(LED_PIN) == 0);
+  triggerHwTimer();
   VERIFY(digitalRead(LED_PIN) == 1);
   triggerHwTimer();
   VERIFY(digitalRead(LED_PIN) == 0);

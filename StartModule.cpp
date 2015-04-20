@@ -31,8 +31,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define EEPROM_MAGIC 0xab
 
-#define TIMER_PERIOD 333333
-#define ONE_SEC_IN_TIMER_TICKS 3
+#define TIMER_PERIOD 250000
+#define ONE_SEC_IN_TIMER_TICKS 4
 
 // State data saved in EEPROM
 struct stateData {
@@ -188,11 +188,18 @@ void StartModule::timerHandler()
     switch (state_)
     {
     case STATE_PROGRAM:
+      // Go to idle
       setState(STATE_IDLE);
+      break;
+
+    case STATE_STOPPED:
+      // Restart timer to blink forever
+      setLed(2);
       break;
 
     case STATE_STOP_SAFE:
     default:
+      // Go to stopped
       setState(STATE_STOPPED);
       break;
     }
@@ -218,15 +225,13 @@ void StartModule::setState(robot_state state)
     case STATE_RUNNING:
       setLed(1);
       break;
+
     case STATE_PROGRAM:
+    case STATE_STOP_SAFE:
+    case STATE_STOPPED:
       setLed(2);
       break;
-    case STATE_STOP_SAFE:
-      setLed(0);
-      blinkLed_ = false;
-      blinkCount_ = ONE_SEC_IN_TIMER_TICKS;
-      timer_->begin(timerIsr, TIMER_PERIOD);
-      break;
+
     default:
       setLed(0);
       break;
@@ -290,9 +295,9 @@ void StartModule::setLed(int state)
   else if (2 == state)
   {
     // Blink
-    digitalWrite(ledPin_, HIGH);
+    digitalWrite(ledPin_, LOW);
     blinkLed_ = true;
-    blinkCount_ = 3;
+    blinkCount_ = ONE_SEC_IN_TIMER_TICKS;
     timer_->begin(timerIsr, TIMER_PERIOD);
   }
   else
